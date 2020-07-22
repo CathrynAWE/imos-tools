@@ -82,6 +82,7 @@ fileTimeFormat = "%Y%m%d"
 ncTimeFormat = "%Y-%m-%dT%H:%M:%SZ"
 sensor = fileProductTypeSplit[2]
 
+# Generate OceanSITES file name
 outputName = "OS" \
              + "_" + "SOTS" \
              + "_" + fileProductType + "-" + fileProductTypeSplit[1] \
