@@ -213,7 +213,7 @@ ncOut.setncattr("platform_recovery_cruise_name", platform_recovery_cruise_name)
 ncOut.setncattr("references", "http://www.imos.org.au, data QC procedure document: http://dx.doi.org/10.26198/5dfad21358a8d, http://www.oceansites.org/")
 
 # TODO: sort the attributes alphabetcially?
-
+#ncOut.ncattrs = sorted(ncOut.ncattrs)
 
 
 # copyData
