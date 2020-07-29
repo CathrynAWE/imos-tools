@@ -102,14 +102,15 @@ ncOut = Dataset(outputName, 'w', format='NETCDF4')
 globalAttributeBlackList = ['time_coverage_end', 'time_coverage_start',
                             'time_deployment_end', 'time_deployment_start',
                             'compliance_checks_passed', 'compliance_checker_version', 'compliance_checker_imos_version',
-                            'date_created',
-                            'deployment_code',
-                            'instrument',
-                            'instrument_nominal_depth',
+                            'date_created', 'Mooring', 'project',
+                            'deployment_code', 'Metadata_Conventions',
+                            'instrument', 'disclaimer', 'distribution_statement',
+                            'instrument_nominal_depth', 'standard_name_vocabulary',
                             'instrument_sample_interval',
-                            'instrument_serial_number',
-                            'quality_control_log',
-                            'history', 'acknowledgement', 'abstract', 'author', 'author_email', 'file_version']
+                            'instrument_serial_number', 'institution', 'institution_address',
+                            'quality_control_log', 'citation', 'contributor_role', 'data_centre', 'data_centre_email',
+                            'history', 'acknowledgement', 'abstract', 'author', 'author_email', 'file_version'
+                            'references']
 
 # these attributes are actually part of the OceanSites list, so I took them off the BlackList
 #, 'netcdf_version','geospatial_lat_max', 'geospatial_lat_min', 'geospatial_lon_max', 'geospatial_lon_min',
@@ -140,6 +141,24 @@ instrumentName = dsIn.getncattr("instrument")
 serialNumber = dsIn.getncattr("instrument_serial_number")
 deployment_start = dsIn.getncattr("time_deployment_start")
 deployment_end = dsIn.getncattr("time_deployment_end")
+deployment_voyage = dsIn.getncattr("voyage_deployment")
+recovery_voyage = dsIn.getncattr("voyage_recovery")
+deployment_splitparts = deployment_voyage.split("=")
+recovery_splitparts = recovery_voyage.split("=")
+platform_deployment_cruise_name = deployment_splitparts[-1]
+platform_recovery_cruise_name = recovery_splitparts[-1]
+
+if platform_deployment_cruise_name[:2]  == "IN":
+    deployment_ship = "RV Investigator"
+elif platform_deployment_cruise_name[:2]  == "SS":
+    deployment_ship = "RV Southern Surveyor"
+
+if platform_recovery_cruise_name[:2]  == "IN":
+    recovery_ship = "RV Investigator"
+elif platform_recovery_cruise_name[:2]  == "SS":
+    recovery_ship = "RV Southern Surveyor"
+
+
 
 dsIn.close()
 
@@ -147,15 +166,13 @@ ncOut.setncattr("time_coverage_start", dates[0].strftime(ncTimeFormat))
 ncOut.setncattr("time_coverage_end", dates[-1].strftime(ncTimeFormat))
 ncOut.setncattr("date_created", datetime.utcnow().strftime(ncTimeFormat))
 ncOut.setncattr("history", history + '\n' + datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC : Convert from IMOS file : ") + fileName)
-ncOut.setncattr("acknowledgement", "We acknowledge support from the following agencies: the Australian Antarctic Program Partnership (AAPP), the Antarctic Climate and Ecosystems Cooperative Research Centre (ACE CRC), the Integrated Marine Observing System (www.imos.org.au), University of Tasmania (UTAS), Bureau of Meteorology (BoM), the Marine National Facility (MNF) and the Australian Antarctic Division (AAD). We also acknowledge the support of the CSIRO Moored Sensor Systems team."
+ncOut.setncattr("acknowledgement", "We acknowledge support from the following agencies: the Australian Antarctic Program Partnership (AAPP), the Antarctic Climate and Ecosystems Cooperative Research Centre (ACE CRC), the Integrated Marine Observing System (www.imos.org.au), University of Tasmania (UTAS), Bureau of Meteorology (BoM), the Marine National Facility (MNF) and the Australian Antarctic Division (AAD). We also acknowledge the support of the CSIRO Moored Sensor Systems team.")
 ncOut.setncattr("data_type", "OceanSITES time-series data")
 ncOut.setncattr("format_version", "1.3")
 ncOut.setncattr("network", "IMOS")
 # TODO: is this the right theme to use?
 ncOut.setncattr("theme", "Global Ocean Watch")
 ncOut.setncattr("summary", "Particle flux data from the Southern Ocean Time Series observatory in the Southern Ocean southwest of Tasmania.")
-# TODO: is this the correct terminology?
-ncOut.setncattr("institution_references", "http://www.oceansites.org, http://imos.org.au")
 ncOut.setncattr("id", outputName)
 ncOut.setncattr("sea_area", "Pacific Ocean")
 ncOut.setncattr("array", "SOTS")
@@ -163,21 +180,41 @@ ncOut.setncattr("update_interval", "void")
 ncOut.setncattr("creator_institution", "Commonwealth Scientific and Industrial Research Organisation (CSIRO)")
 ncOut.setncattr("source", "subsurface mooring")
 ncOut.setncattr("naming_authority", "OceanSITES")
-ncOut.setncattr("data_assembly_center", "IMOS")
-# TODO: this needs more information included, e.g. PI, etc.
-ncOut.setncattr("citation", "Ocean Sites. [year-of-data-download], [Title], [Data access URL], accessed [date- of-access]")
+ncOut.setncattr("data_assembly_center", "Australian Ocean Data Network (AODN)")
+ncOut.setncattr("citation", "Any users of IMOS data are required to clearly acknowledge the source of the material derived from IMOS in the format: "
+                            "\"Data was sourced from the Australian Integrated Marine Observing System (IMOS). IMOS is enabled by the National Collaborative Research Infrastructure Strategy (NCRIS). "
+                            "It is operated by a consortium of institutions as an unincorporated joint venture, with the University of Tasmania as Lead Agent.\" "
+                            "as well as \"PI Elizabeth Shadwick SOTS - SAZ. These data were collected and made freely "
+                            "available by the OceanSITES program and the national programs that contribute to it. "
+                            "[year-of-data-download], [Title], [Data access URL], accessed [date- of-access].\"")
 ncOut.setncattr("Conventions", "CF-1.6 OceanSITES-1.3 NCADD-1.2.1")
 ncOut.setncattr("license", "Follows CLIVAR (Climate Variability and Predictability) standards,cf. http://www.clivar.org/data/data_policy.php Data available free of charge. User assumes all risk for use of  data. User must display citation in any publication or product using data. User must contact PI prior to any commercial use of data.")
 ncOut.setncattr("contributor_name", "CSIRO; IMOS; ACE-CRC; MNF; AAPP")
 ncOut.setncattr("processing_level", "data manually reviewed")
 # TODO: can we say "excellent" for the SAZ data since it is QCed?
-ncOut.setncattr("QC_indicator", "mixed")
+ncOut.setncattr("QC_indicator", "excellent")
 ncOut.setncattr("instrument", instrumentName + "-" + serialNumber)
 ncOut.setncattr("cdm_data_type", "Station")
 ncOut.setncattr("platform_deployment_date", deployment_start)
 ncOut.setncattr("platform_recovery_date", deployment_end)
+ncOut.setncattr("creator_name", "Cathryn Wynn-Edwards")
+ncOut.setncattr("creator_email", "cathryn.wynn-edwards@csiro.au")
+ncOut.setncattr("creator_type", "person")
+ncOut.setncattr("publisher_name", "Peter Jansen")
+ncOut.setncattr("publisher_email", "peter.jansen@csiro.au")
+ncOut.setncattr("netcdf_version", "netcdf-4 classic")
+ncOut.setncattr("keywords_vocabulary", "GCMD Science Keywords")
+ncOut.setncattr("keywords", "PARTICLE FLUX, CARBON, SEDIMENT COMPOSITION, INORGANIC CARBON,"
+                            "MARINE GEOCHEMISTRY, ORGANIC CARBON, ORGANIC MATTER, SILICATE, CARBONATE")
+ncOut.setncattr("platform_deployment_ship_name", deployment_ship)
+ncOut.setncattr("platform_deployment_cruise_name", platform_deployment_cruise_name)
+ncOut.setncattr("platform_recovery_ship_name", recovery_ship)
+ncOut.setncattr("platform_recovery_cruise_name", platform_recovery_cruise_name)
+ncOut.setncattr("references", "http://www.imos.org.au, data QC procedure document: http://dx.doi.org/10.26198/5dfad21358a8d, http://www.oceansites.org/")
 
 # TODO: sort the attributes alphabetcially?
+
+
 
 # copyData
 #
