@@ -81,13 +81,15 @@ fileProductType = fileProductTypeSplit[0]
 fileTimeFormat = "%Y%m%d"
 ncTimeFormat = "%Y-%m-%dT%H:%M:%SZ"
 sensor = fileProductTypeSplit[3]
+nominal_depth = fileProductTypeSplit[7]
+original_file_creation_date = splitParts[-1].split(".")
 
 # Generate OceanSITES file name
 outputName = "OS" \
              + "_" + "SOTS" \
              + "_" + fileProductType + "-" + fileProductTypeSplit[1] \
              + "_D" \
-             + "_" + sensor + "-" + splitParts[-1] \
+             + "_" + sensor + "-" + nominal_depth + "_" + original_file_creation_date[0]  \
              + ".nc"
 
 print("output file : %s" % outputName)
@@ -145,19 +147,34 @@ deployment_voyage = dsIn.getncattr("voyage_deployment")
 recovery_voyage = dsIn.getncattr("voyage_recovery")
 deployment_splitparts = deployment_voyage.split("=")
 recovery_splitparts = recovery_voyage.split("=")
-platform_deployment_cruise_name = deployment_splitparts[-1]
-platform_recovery_cruise_name = recovery_splitparts[-1]
+
+
+if len(deployment_splitparts) < 1:
+    platform_deployment_cruise_name = deployment_voyage
+else:
+    platform_deployment_cruise_name = deployment_splitparts[-1]
+
+
+if len(recovery_splitparts) < 1:
+    platform_recovery_cruise_name = recovery_voyage
+else:
+    platform_recovery_cruise_name = recovery_splitparts[-1]
+
+
 
 if platform_deployment_cruise_name[:2]  == "IN":
     deployment_ship = "RV Investigator"
 elif platform_deployment_cruise_name[:2]  == "SS":
     deployment_ship = "RV Southern Surveyor"
+else:
+    deployment_ship = "RV Aurora Australis"
 
 if platform_recovery_cruise_name[:2]  == "IN":
     recovery_ship = "RV Investigator"
 elif platform_recovery_cruise_name[:2]  == "SS":
     recovery_ship = "RV Southern Surveyor"
-
+else:
+    recovery_ship = "RV Aurora Australis"
 
 
 dsIn.close()
@@ -170,7 +187,6 @@ ncOut.setncattr("acknowledgement", "We acknowledge support from the following ag
 ncOut.setncattr("data_type", "OceanSITES time-series data")
 ncOut.setncattr("format_version", "1.3")
 ncOut.setncattr("network", "IMOS")
-# TODO: is this the right theme to use?
 ncOut.setncattr("theme", "Global Ocean Watch")
 ncOut.setncattr("summary", "Particle flux data from the Southern Ocean Time Series observatory in the Southern Ocean southwest of Tasmania.")
 ncOut.setncattr("id", outputName)
@@ -253,7 +269,8 @@ for v in varList:
 
     fill = None
     try:
-        fill = varList[v].fill_value
+        #fill = varList[v].fill_value
+        fill = varList[v]._FillValue
     except:
         pass
     ncVariableOut = ncOut.createVariable(varnameOut, varList[v].dtype, varDims, fill_value=fill)
