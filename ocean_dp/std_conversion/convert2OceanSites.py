@@ -11,6 +11,39 @@ import numpy
 
 from dateutil.parser import parse
 
+# sort the attributes alphabetically
+def sort_attributes(outputname):
+
+    ds = Dataset(outputName, 'a')
+
+    attrs = ds.ncattrs()
+    # get all attributes ino a list
+
+    list_of_values = []
+    for item in attrs:
+        list_of_values.append(ds.getncattr(item))
+
+    di = dict(zip(attrs, list_of_values))
+
+    # delete all attributes, this allows for them to be added again in sorted order
+
+    for item in attrs:
+        ds.delncattr(item)
+
+    # print (di)
+    # now re-add the attributes in sorted order
+    for att in sorted(attrs, key=str.lower):  # or  key=lambda s: s.lower()
+        value = di[att]
+        if type(value) is str:
+            value = value.format(**di)
+        ds.setncattr(att, value)
+
+    # print("attr : ", att, " = " , value)
+
+    ds.close()
+
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('file', help='input file name')
 args = parser.parse_args()
@@ -30,9 +63,9 @@ path_file = args.file
 
 print("input file %s" % path_file)
 
-nc = Dataset(path_file, mode="r")
+ds_in = Dataset(path_file, mode="r")
 
-ncTime = nc.get_variables_by_attributes(standard_name='time')
+ncTime = ds_in.get_variables_by_attributes(standard_name='time')
 
 if not ncTime:
     print("time variable not found")
@@ -40,8 +73,8 @@ if not ncTime:
     ncTime = {}
     ncTime[0] = nc.variables["TIME"]
 
-time_deployment_start = nc.time_deployment_start
-time_deployment_end = nc.time_deployment_end
+time_deployment_start = ds_in.time_deployment_start
+time_deployment_end = ds_in.time_deployment_end
 
 tStart = parse(time_deployment_start, ignoretz=True)
 tEnd = parse(time_deployment_end, ignoretz=True)
@@ -54,8 +87,6 @@ msk = (maTime < tStartnum) | (maTime > tEndnum)
 maTime.mask = msk
 
 dates = num2date(maTime.compressed(), units=ncTime[0].units, calendar=ncTime[0].calendar)
-
-nc.close()
 
 
 # create a new filename
@@ -112,7 +143,7 @@ globalAttributeBlackList = ['time_coverage_end', 'time_coverage_start',
                             'instrument_serial_number', 'institution', 'institution_address',
                             'quality_control_log', 'citation', 'contributor_role', 'data_centre', 'data_centre_email',
                             'history', 'acknowledgement', 'abstract', 'author', 'author_email', 'file_version'
-                            'references']
+                            'references', 'voyage_deployment', 'voyage_recovery']
 
 # these attributes are actually part of the OceanSites list, so I took them off the BlackList
 #, 'netcdf_version','geospatial_lat_max', 'geospatial_lat_min', 'geospatial_lon_max', 'geospatial_lon_min',
@@ -120,36 +151,39 @@ globalAttributeBlackList = ['time_coverage_end', 'time_coverage_start',
 
 # global attributes
 
-dsIn = Dataset(path_file, mode='r')
-for a in dsIn.ncattrs():
+
+for a in ds_in.ncattrs():
     if not (a in globalAttributeBlackList):
-        print("Attribute %s value %s" % (a, dsIn.getncattr(a)))
-        ncOut.setncattr(a, dsIn.getncattr(a))
+        print("Attribute %s value %s" % (a, ds_in.getncattr(a)))
+        ncOut.setncattr(a, ds_in.getncattr(a))
 
 # copy dimensions
 
-for d in dsIn.dimensions:
-    size = dsIn.dimensions[d].size
+for d in ds_in.dimensions:
+    size = ds_in.dimensions[d].size
     if d == 'TIME':
         size = dates.shape[0]
     print("dimension", d, " shape ", size)
     ncOut.createDimension(d, size)
 
+ncOut.createDimension('DEPTH', 1)
 ncOut.createDimension('LATITUDE', 1)
 ncOut.createDimension('LONGITUDE', 1)
 
 
-history = dsIn.getncattr("history")
-instrumentName = dsIn.getncattr("instrument")
-serialNumber = dsIn.getncattr("instrument_serial_number")
-deployment_start = dsIn.getncattr("time_deployment_start")
-deployment_end = dsIn.getncattr("time_deployment_end")
-deployment_voyage = dsIn.getncattr("voyage_deployment")
-recovery_voyage = dsIn.getncattr("voyage_recovery")
+history = ds_in.getncattr("history")
+instrumentName = ds_in.getncattr("instrument")
+serialNumber = ds_in.getncattr("instrument_serial_number")
+deployment_start = ds_in.getncattr("time_deployment_start")
+deployment_end = ds_in.getncattr("time_deployment_end")
+deployment_voyage = ds_in.getncattr("voyage_deployment")
+recovery_voyage = ds_in.getncattr("voyage_recovery")
+
+# work out cruise / voyage info from voyage attributes
 deployment_splitparts = deployment_voyage.split("=")
 recovery_splitparts = recovery_voyage.split("=")
 
-
+# cruise name
 if len(deployment_splitparts) < 1:
     platform_deployment_cruise_name = deployment_voyage
 else:
@@ -162,7 +196,7 @@ else:
     platform_recovery_cruise_name = recovery_splitparts[-1]
 
 
-
+# ship name
 if platform_deployment_cruise_name[:2]  == "IN":
     deployment_ship = "RV Investigator"
 elif platform_deployment_cruise_name[:2]  == "SS":
@@ -177,7 +211,7 @@ elif platform_recovery_cruise_name[:2] == "SS":
 else:
     recovery_ship = "RV Aurora Australis"
 
-
+# ICES name
 if deployment_ship == "RV Aurora Australis":
     ICES_deployment = "09AR"
 elif deployment_ship == "RV Southern Surveyor":
@@ -193,8 +227,7 @@ elif recovery_ship == "RV Investigator":
     ICES_recovery = "096U"
 
 
-dsIn.close()
-
+# create the OceanSITES global attributes
 ncOut.setncattr("time_coverage_start", dates[0].strftime(ncTimeFormat))
 ncOut.setncattr("time_coverage_end", dates[-1].strftime(ncTimeFormat))
 ncOut.setncattr("date_created", datetime.utcnow().strftime(ncTimeFormat))
@@ -245,6 +278,8 @@ ncOut.setncattr("platform_recovery_cruise_name", platform_recovery_cruise_name)
 ncOut.setncattr("references", "http://www.imos.org.au, data QC procedure document: http://dx.doi.org/10.26198/5dfad21358a8d, http://www.oceansites.org/")
 ncOut.setncattr("platform_deployment_ship_ICES", ICES_deployment)
 ncOut.setncattr("platform_recovery_ship_ICES", ICES_recovery)
+ncOut.setncattr("platform_recovery_voyage_url", recovery_voyage)
+ncOut.setncattr("platform_deployment_voyage_url", deployment_voyage)
 
 
 # copyData
@@ -252,15 +287,58 @@ ncOut.setncattr("platform_recovery_ship_ICES", ICES_recovery)
 
 # copy variable data from input files into output file
 
-nc1 = Dataset(path_file, mode="r")
+varList = list(ds_in.variables)
 
-varList = nc1.variables
+# these need re-defining so that they are OceanSites compliant
+varList.remove("NOMINAL_DEPTH")
+varList.remove("LATITUDE")
+varList.remove("LONGITUDE")
+
+# NOMINAL_DEPTH becomes DEPTH
+var_depth = ncOut.createVariable("DEPTH", 'f4', 'DEPTH')
+var_depth.standard_name = 'depth'
+var_depth.long_name = 'Depth of each measurement'
+var_depth.comment = 'nominal depth'
+var_depth.units = 'meters'
+var_depth.axis = 'Z'
+var_depth.valid_min = -5
+var_depth.valid_max = 12000
+var_depth.positive = "down"
+var_depth.reference_datum = "sea surface"
+var_depth[:] = ds_in.variables['NOMINAL_DEPTH'][:]
+
+
+var_lat = ncOut.createVariable("LATITUDE", 'f4', 'LATITUDE')
+var_lat.standard_name = 'latitude'
+var_lat.long_name = 'Latitude of each location'
+var_lat.units = 'degrees_north'
+var_lat.axis = 'Y'
+var_lat.valid_min = -90
+var_lat.valid_max = -90
+var_lat_reference_datum = "WGS84 coordinate reference system"
+var_lat.coordinate_reference_frame = 'urn:ogc:crs:EPSG::4326'
+var_lat[:] = ds_in.variables['LATITUDE'][:]
+
+var_lon = ncOut.createVariable("LONGITUDE", 'f4', 'LONGITUDE')
+var_lon.standard_name = 'longitude'
+var_lon.long_name = 'Longitude of each location'
+var_lon.units = 'degrees_east'
+var_lon.axis = 'X'
+var_lon.valid_min = -90
+var_lon.valid_max = -90
+var_lon_reference_datum = "WGS84 coordinate reference system"
+var_lon.coordinate_reference_frame = 'urn:ogc:crs:EPSG::4326'
+var_lon[:] = ds_in.variables['LONGITUDE'][:]
+
+
 
 for v in varList:
-    print("%s file %s" % (v, path_file))
+    print("processing variable : %s from file %s" % (v, path_file))
 
-    maVariable = nc1.variables[v][:]  # get the data
-    varDims = varList[v].dimensions
+    var_in = ds_in.variables[v]
+
+    maVariable = var_in[:]  # get the data
+    varDims = var_in.dimensions
     var_out = maVariable
     if 'TIME' in varDims:
         print("its a time variable shape ", var_out.shape, "dims", varDims, "len shape", len(var_out.shape))
@@ -276,101 +354,67 @@ for v in varList:
 
     print("var out shape ", var_out.shape)
 
-    #print(varDims)
-    #print(maVariable.compressed().shape)
-
     # rename the _quality_control variables _QC and nominal depth DEPTH
     varnameOut = re.sub("_quality_control", "_QC", v)
-    varnameOut = re.sub("NOMINAL_DEPTH", "DEPTH", v)
-
-
-    #fill = None
-    #try:
-    #    if v.endswith("_quality_control"):
-    #     fill = numpy.int8(-128)
-    #    else:
-    #     fill = varList[v]._FillValue
-    #except:
-    #   pass
 
     fill = None
     try:
-        fill = varList[v]._FillValue
+        if v.endswith("_quality_control"):
+            fill = numpy.int8(-128)
+        else:
+            fill = var_in._FillValue
     except:
        pass
 
-    ncVariableOut = ncOut.createVariable(varnameOut, varList[v].dtype, varDims, fill_value=fill)
+    print('variable fill value', var_in.dtype, fill)
+
+
+    ncVariableOut = ncOut.createVariable(varnameOut, var_in.dtype, varDims, fill_value=fill)
     print("netCDF variable out shape", ncVariableOut.shape, "dims", varDims)
     # copy the variable attributes
-    # this is ends up as the super set of all files
-    for a in varList[v].ncattrs():
+
+    for a in var_in.ncattrs():
         if a != '_FillValue':
-            print("%s Attribute %s = %s" % (varnameOut, a, varList[v].getncattr(a)))
-            attValue = varList[v].getncattr(a)
+            print("%s Attribute %s = %s" % (varnameOut, a, var_in.getncattr(a)))
+            attValue = var_in.getncattr(a)
 
-            # duplication
-            #if isinstance(attValue, str):
-             #   attValue = re.sub("_quality_control", "_QC", varList[v].getncattr(a))
-            #ncVariableOut.setncattr(a, attValue)
+            # rename ancillary variable names
+            if (a == 'anciallary_variables') & isinstance(attValue, str):
+                attValue = re.sub("_quality_control", "_QC", var_in.getncattr(a))
 
-            if isinstance(attValue, str):
+            # make flag_meanings oceanSites compliant
+            if (a == 'flag_meanings') & isinstance(attValue, str):
                attValue = re.sub("unknown good_data probably_good_data probably_bad_data bad_data missing_value",
                                   "unknown good_data probably_good_data potentially_correctable_bad_data bad_data nominal_value interpolated_value missing_value",
-                                  varList[v].getncattr(a))
+                                  var_in.getncattr(a))
+            if a == 'flag_values':
+                attValue = numpy.int8([0, 1, 2, 3, 4, 7, 8, 9])
             ncVariableOut.setncattr(a, attValue)
 
-            #if isinstance(attValue, str):
-             #   attValue = re.sub("127", "-128", varList[v].getncattr(a))
-            #ncVariableOut.setncattr(a, attValue)
+    # oceanSITES insist on time units timezone as Z not UTC
+    if (v == 'TIME') | (v == 'TIME_bnds'):
+        ncVariableOut.setncattr('units', var_in.getncattr('units').replace(" UTC", "Z"))
+
+     # oceanSITES stores instrument (called sensor in oceanSITES) info in each variable
+    if ~(v.endswith("_QC") | v.endswith("_uncertainty")):
+        ncVariableOut.sensor_model = instrumentName
+        ncVariableOut.sensor_serial_number = serialNumber
 
     ncVariableOut[:] = var_out
 
-
     # update the history attribute
     try:
-        hist = nc1.history + "\n"
+        hist = ds_in.history + "\n"
     except AttributeError:
         hist = ""
 
     ncOut.setncattr('history', hist + datetime.utcnow().strftime("%Y-%m-%d") + " : converted to oceanSITES format from file " + path_file)
 
-
-nc1.close()
+ds_in.close()
 
 ncOut.close()
 
-# sort the attributes alphabetcially
 
-ds = Dataset(outputName, 'a')
-
-attrs = ds.ncattrs()
-
-list_of_values = []
-
-for item in attrs:
-    list_of_values.append(ds.getncattr(item))
-
-di = dict(zip(attrs, list_of_values))
-
-# delete all attributes, this allows for them to be added again in sorted order
-
-for item in attrs:
-    ds.delncattr(item)
-
-# print (di)
-
-for att in sorted(attrs, key=str.lower):  # or  key=lambda s: s.lower()
-
-    value = di[att]
-
-    if type(value) is str:
-        value = value.format(**di)
-
-    ds.setncattr(att, value)
-
-    # print("attr : ", att, " = " , value)
-
-
-ds.close()
+sort_attributes(outputName)
 
 #return ncOut
