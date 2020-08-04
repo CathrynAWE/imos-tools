@@ -170,9 +170,9 @@ elif platform_deployment_cruise_name[:2]  == "SS":
 else:
     deployment_ship = "RV Aurora Australis"
 
-if platform_recovery_cruise_name[:2]  == "IN":
+if platform_recovery_cruise_name[:2] == "IN":
     recovery_ship = "RV Investigator"
-elif platform_recovery_cruise_name[:2]  == "SS":
+elif platform_recovery_cruise_name[:2] == "SS":
     recovery_ship = "RV Southern Surveyor"
 else:
     recovery_ship = "RV Aurora Australis"
@@ -279,24 +279,25 @@ for v in varList:
     #print(varDims)
     #print(maVariable.compressed().shape)
 
-    # rename the _quality_control variables _QC
+    # rename the _quality_control variables _QC and nominal depth DEPTH
     varnameOut = re.sub("_quality_control", "_QC", v)
     varnameOut = re.sub("NOMINAL_DEPTH", "DEPTH", v)
 
 
     #fill = None
-    #if varList[v].dtype == "NC_BYTE":
-     #   fill = "-128"
-    #else:
-      #  fill = varList[v]._FillValue
+    #try:
+    #    if v.endswith("_quality_control"):
+    #     fill = numpy.int8(-128)
+    #    else:
+    #     fill = varList[v]._FillValue
     #except:
-        #pass
+    #   pass
 
     fill = None
     try:
         fill = varList[v]._FillValue
     except:
-        pass
+       pass
 
     ncVariableOut = ncOut.createVariable(varnameOut, varList[v].dtype, varDims, fill_value=fill)
     print("netCDF variable out shape", ncVariableOut.shape, "dims", varDims)
@@ -324,6 +325,7 @@ for v in varList:
 
     ncVariableOut[:] = var_out
 
+
     # update the history attribute
     try:
         hist = nc1.history + "\n"
@@ -331,8 +333,6 @@ for v in varList:
         hist = ""
 
     ncOut.setncattr('history', hist + datetime.utcnow().strftime("%Y-%m-%d") + " : converted to oceanSITES format from file " + path_file)
-
-
 
 
 nc1.close()
