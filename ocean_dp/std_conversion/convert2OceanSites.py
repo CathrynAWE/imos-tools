@@ -138,6 +138,7 @@ for d in dsIn.dimensions:
 ncOut.createDimension('LATITUDE', 1)
 ncOut.createDimension('LONGITUDE', 1)
 
+
 history = dsIn.getncattr("history")
 instrumentName = dsIn.getncattr("instrument")
 serialNumber = dsIn.getncattr("instrument_serial_number")
@@ -175,6 +176,21 @@ elif platform_recovery_cruise_name[:2]  == "SS":
     recovery_ship = "RV Southern Surveyor"
 else:
     recovery_ship = "RV Aurora Australis"
+
+
+if deployment_ship == "RV Aurora Australis":
+    ICES_deployment = "09AR"
+elif deployment_ship == "RV Southern Surveyor":
+    ICES_deployment = "09SS"
+elif deployment_ship == "RV Investigator":
+    ICES_deployment = "096U"
+
+if recovery_ship == "RV Aurora Australis":
+    ICES_recovery = "09AR"
+elif recovery_ship == "RV Southern Surveyor":
+    ICES_recovery = "09SS"
+elif recovery_ship == "RV Investigator":
+    ICES_recovery = "096U"
 
 
 dsIn.close()
@@ -227,9 +243,8 @@ ncOut.setncattr("platform_deployment_cruise_name", platform_deployment_cruise_na
 ncOut.setncattr("platform_recovery_ship_name", recovery_ship)
 ncOut.setncattr("platform_recovery_cruise_name", platform_recovery_cruise_name)
 ncOut.setncattr("references", "http://www.imos.org.au, data QC procedure document: http://dx.doi.org/10.26198/5dfad21358a8d, http://www.oceansites.org/")
-
-# TODO: sort the attributes alphabetcially?
-#ncOut.ncattrs = sorted(ncOut.ncattrs)
+ncOut.setncattr("platform_deployment_ship_ICES", ICES_deployment)
+ncOut.setncattr("platform_recovery_ship_ICES", ICES_recovery)
 
 
 # copyData
@@ -266,13 +281,23 @@ for v in varList:
 
     # rename the _quality_control variables _QC
     varnameOut = re.sub("_quality_control", "_QC", v)
+    varnameOut = re.sub("NOMINAL_DEPTH", "DEPTH", v)
+
+
+    #fill = None
+    #if varList[v].dtype == "NC_BYTE":
+     #   fill = "-128"
+    #else:
+      #  fill = varList[v]._FillValue
+    #except:
+        #pass
 
     fill = None
     try:
-        #fill = varList[v].fill_value
         fill = varList[v]._FillValue
     except:
         pass
+
     ncVariableOut = ncOut.createVariable(varnameOut, varList[v].dtype, varDims, fill_value=fill)
     print("netCDF variable out shape", ncVariableOut.shape, "dims", varDims)
     # copy the variable attributes
@@ -282,10 +307,20 @@ for v in varList:
             print("%s Attribute %s = %s" % (varnameOut, a, varList[v].getncattr(a)))
             attValue = varList[v].getncattr(a)
 
-            # Could restrict this just to the ancillary_variables attribute
+            # duplication
+            #if isinstance(attValue, str):
+             #   attValue = re.sub("_quality_control", "_QC", varList[v].getncattr(a))
+            #ncVariableOut.setncattr(a, attValue)
+
             if isinstance(attValue, str):
-                attValue = re.sub("_quality_control", "_QC", varList[v].getncattr(a))
+               attValue = re.sub("unknown good_data probably_good_data probably_bad_data bad_data missing_value",
+                                  "unknown good_data probably_good_data potentially_correctable_bad_data bad_data nominal_value interpolated_value missing_value",
+                                  varList[v].getncattr(a))
             ncVariableOut.setncattr(a, attValue)
+
+            #if isinstance(attValue, str):
+             #   attValue = re.sub("127", "-128", varList[v].getncattr(a))
+            #ncVariableOut.setncattr(a, attValue)
 
     ncVariableOut[:] = var_out
 
@@ -297,7 +332,45 @@ for v in varList:
 
     ncOut.setncattr('history', hist + datetime.utcnow().strftime("%Y-%m-%d") + " : converted to oceanSITES format from file " + path_file)
 
+
+
+
 nc1.close()
 
 ncOut.close()
 
+# sort the attributes alphabetcially
+
+ds = Dataset(outputName, 'a')
+
+attrs = ds.ncattrs()
+
+list_of_values = []
+
+for item in attrs:
+    list_of_values.append(ds.getncattr(item))
+
+di = dict(zip(attrs, list_of_values))
+
+# delete all attributes, this allows for them to be added again in sorted order
+
+for item in attrs:
+    ds.delncattr(item)
+
+# print (di)
+
+for att in sorted(attrs, key=str.lower):  # or  key=lambda s: s.lower()
+
+    value = di[att]
+
+    if type(value) is str:
+        value = value.format(**di)
+
+    ds.setncattr(att, value)
+
+    # print("attr : ", att, " = " , value)
+
+
+ds.close()
+
+#return ncOut
