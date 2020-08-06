@@ -3,6 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="898044e3-c90f-4b8d-8fdd-3e146b5b94b7" name="Default Changelist" comment="add oceanSites data manual">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ocean_dp/std_conversion/convert2OceanSites.py" beforeDir="false" afterPath="$PROJECT_DIR$/ocean_dp/std_conversion/convert2OceanSites.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,7 +36,7 @@
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/ocean_dp/std_conversion" />
     <property name="run.code.analysis.last.selected.profile" value="pProject Default" />
-    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PythonContentEntriesConfigurable" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="PyConsoleOptionsProvider">
     <option name="myIpythonEnabled" value="false" />
@@ -110,9 +111,10 @@
     </state>
     <state width="1244" height="160" key="GridCell.Tab.0.right/0.0.1280.680/-1600.0.1600.1160@0.0.1280.680" timestamp="1596509985829" />
     <state width="1244" height="159" key="GridCell.Tab.0.right/0.0.1280.680@0.0.1280.680" timestamp="1596516929527" />
-    <state x="142" y="0" key="SettingsEditor" timestamp="1595484955396">
+    <state x="142" y="0" key="SettingsEditor" timestamp="1596668358893">
       <screen x="0" y="0" width="1280" height="680" />
     </state>
+    <state x="142" y="0" key="SettingsEditor/0.0.1280.680/-1600.0.1600.1160@0.0.1280.680" timestamp="1596668358893" />
     <state x="142" y="0" key="SettingsEditor/0.0.1280.680@0.0.1280.680" timestamp="1595484955396" />
   </component>
   <component name="XDebuggerManager">

@@ -5,6 +5,7 @@ from netCDF4 import Dataset
 import argparse
 import re
 import numpy
+import pandas as pd
 
 # IMOS file format conversion to OceanSITES format
 # Pete Jansen 2018-10-09
@@ -143,7 +144,8 @@ globalAttributeBlackList = ['time_coverage_end', 'time_coverage_start',
                             'instrument_serial_number', 'institution', 'institution_address',
                             'quality_control_log', 'citation', 'contributor_role', 'data_centre', 'data_centre_email',
                             'history', 'acknowledgement', 'abstract', 'author', 'author_email', 'file_version'
-                            'references', 'voyage_deployment', 'voyage_recovery']
+                            'references', 'voyage_deployment', 'voyage_recovery', 'voyage_deployment_start_date',
+                            'voyage_recovery_start_date']
 
 # these attributes are actually part of the OceanSites list, so I took them off the BlackList
 #, 'netcdf_version','geospatial_lat_max', 'geospatial_lat_min', 'geospatial_lon_max', 'geospatial_lon_min',
@@ -226,6 +228,16 @@ elif recovery_ship == "RV Southern Surveyor":
 elif recovery_ship == "RV Investigator":
     ICES_recovery = "096U"
 
+# platform_deployment_cruise_ExpoCode
+voyage_deployment_start = ds_in.getncattr("voyage_deployment_start_date")
+voyage_deployment_start_splits = voyage_deployment_start.split("/")
+platform_deployment_cruise_ExpoCode = ICES_deployment + voyage_deployment_start_splits[-1] + voyage_deployment_start_splits[1] + voyage_deployment_start_splits[0]
+
+# and platform_recovery_cruise_ExpoCode
+voyage_recovery_start = ds_in.getncattr("voyage_recovery_start_date")
+voyage_recovery_start_splits = voyage_recovery_start.split("/")
+platform_recovery_cruise_ExpoCode = ICES_recovery + voyage_recovery_start_splits[-1] + voyage_recovery_start_splits[1] + voyage_recovery_start_splits[0]
+
 
 # create the OceanSITES global attributes
 ncOut.setncattr("time_coverage_start", dates[0].strftime(ncTimeFormat))
@@ -280,6 +292,8 @@ ncOut.setncattr("platform_deployment_ship_ICES", ICES_deployment)
 ncOut.setncattr("platform_recovery_ship_ICES", ICES_recovery)
 ncOut.setncattr("platform_recovery_voyage_url", recovery_voyage)
 ncOut.setncattr("platform_deployment_voyage_url", deployment_voyage)
+ncOut.setncattr("platform_recovery_cruise_ExpoCode", platform_recovery_cruise_ExpoCode)
+ncOut.setncattr("platform_deployment_cruise_ExpoCode", platform_deployment_cruise_ExpoCode)
 
 
 # copyData
