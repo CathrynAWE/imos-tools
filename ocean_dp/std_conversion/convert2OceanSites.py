@@ -176,67 +176,11 @@ ncOut.createDimension('LONGITUDE', 1)
 history = ds_in.getncattr("history")
 instrumentName = ds_in.getncattr("instrument")
 serialNumber = ds_in.getncattr("instrument_serial_number")
-deployment_start = ds_in.getncattr("time_deployment_start")
-deployment_end = ds_in.getncattr("time_deployment_end")
+platform_deployment_date = ds_in.getncattr("time_deployment_start")
+platform_recovery_date = ds_in.getncattr("time_deployment_end")
 deployment_voyage = ds_in.getncattr("voyage_deployment")
 recovery_voyage = ds_in.getncattr("voyage_recovery")
 
-# work out cruise / voyage info from voyage attributes
-deployment_splitparts = deployment_voyage.split("=")
-recovery_splitparts = recovery_voyage.split("=")
-
-# cruise name
-if len(deployment_splitparts) < 1:
-    platform_deployment_cruise_name = deployment_voyage
-else:
-    platform_deployment_cruise_name = deployment_splitparts[-1]
-
-
-if len(recovery_splitparts) < 1:
-    platform_recovery_cruise_name = recovery_voyage
-else:
-    platform_recovery_cruise_name = recovery_splitparts[-1]
-
-
-# ship name
-if platform_deployment_cruise_name[:2]  == "IN":
-    deployment_ship = "RV Investigator"
-elif platform_deployment_cruise_name[:2]  == "SS":
-    deployment_ship = "RV Southern Surveyor"
-else:
-    deployment_ship = "RV Aurora Australis"
-
-if platform_recovery_cruise_name[:2] == "IN":
-    recovery_ship = "RV Investigator"
-elif platform_recovery_cruise_name[:2] == "SS":
-    recovery_ship = "RV Southern Surveyor"
-else:
-    recovery_ship = "RV Aurora Australis"
-
-# ICES name
-if deployment_ship == "RV Aurora Australis":
-    ICES_deployment = "09AR"
-elif deployment_ship == "RV Southern Surveyor":
-    ICES_deployment = "09SS"
-elif deployment_ship == "RV Investigator":
-    ICES_deployment = "096U"
-
-if recovery_ship == "RV Aurora Australis":
-    ICES_recovery = "09AR"
-elif recovery_ship == "RV Southern Surveyor":
-    ICES_recovery = "09SS"
-elif recovery_ship == "RV Investigator":
-    ICES_recovery = "096U"
-
-# platform_deployment_cruise_ExpoCode
-voyage_deployment_start = ds_in.getncattr("voyage_deployment_start_date")
-voyage_deployment_start_splits = voyage_deployment_start.split("/")
-platform_deployment_cruise_ExpoCode = ICES_deployment + voyage_deployment_start_splits[-1] + voyage_deployment_start_splits[1] + voyage_deployment_start_splits[0]
-
-# and platform_recovery_cruise_ExpoCode
-voyage_recovery_start = ds_in.getncattr("voyage_recovery_start_date")
-voyage_recovery_start_splits = voyage_recovery_start.split("/")
-platform_recovery_cruise_ExpoCode = ICES_recovery + voyage_recovery_start_splits[-1] + voyage_recovery_start_splits[1] + voyage_recovery_start_splits[0]
 
 
 # create the OceanSITES global attributes
@@ -272,8 +216,8 @@ ncOut.setncattr("processing_level", "data manually reviewed")
 ncOut.setncattr("QC_indicator", "excellent")
 ncOut.setncattr("instrument", instrumentName + "-" + serialNumber)
 ncOut.setncattr("cdm_data_type", "Station")
-ncOut.setncattr("platform_deployment_date", deployment_start)
-ncOut.setncattr("platform_recovery_date", deployment_end)
+ncOut.setncattr("platform_deployment_date", platform_deployment_date)
+ncOut.setncattr("platform_recovery_date", platform_recovery_date)
 ncOut.setncattr("creator_name", "Cathryn Wynn-Edwards")
 ncOut.setncattr("creator_email", "cathryn.wynn-edwards@csiro.au")
 ncOut.setncattr("creator_type", "person")
@@ -283,17 +227,9 @@ ncOut.setncattr("netcdf_version", "netcdf-4 classic")
 ncOut.setncattr("keywords_vocabulary", "GCMD Science Keywords")
 ncOut.setncattr("keywords", "PARTICLE FLUX, CARBON, SEDIMENT COMPOSITION, INORGANIC CARBON,"
                             "MARINE GEOCHEMISTRY, ORGANIC CARBON, ORGANIC MATTER, SILICATE, CARBONATE")
-ncOut.setncattr("platform_deployment_ship_name", deployment_ship)
-ncOut.setncattr("platform_deployment_cruise_name", platform_deployment_cruise_name)
-ncOut.setncattr("platform_recovery_ship_name", recovery_ship)
-ncOut.setncattr("platform_recovery_cruise_name", platform_recovery_cruise_name)
 ncOut.setncattr("references", "http://www.imos.org.au, data QC procedure document: http://dx.doi.org/10.26198/5dfad21358a8d, http://www.oceansites.org/")
-ncOut.setncattr("platform_deployment_ship_ICES", ICES_deployment)
-ncOut.setncattr("platform_recovery_ship_ICES", ICES_recovery)
 ncOut.setncattr("platform_recovery_voyage_url", recovery_voyage)
 ncOut.setncattr("platform_deployment_voyage_url", deployment_voyage)
-ncOut.setncattr("platform_recovery_cruise_ExpoCode", platform_recovery_cruise_ExpoCode)
-ncOut.setncattr("platform_deployment_cruise_ExpoCode", platform_deployment_cruise_ExpoCode)
 
 
 # copyData
