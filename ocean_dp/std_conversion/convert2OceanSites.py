@@ -5,7 +5,7 @@ from netCDF4 import Dataset
 import re
 import numpy
 import glob
-
+import os
 
 # IMOS file format conversion to OceanSITES format
 # Pete Jansen and Cathryn Wynn-Edwards 2021-01-11
@@ -102,8 +102,8 @@ for fn in nc_files:
 
     # TODO: what to do with <Data-Code> with a reduced number of variables
 
-    splitPath = fn.split("/")
-    fileName = splitPath[-1]
+
+    fileName = os.path.basename(fn)
     splitParts = fileName.split("_") # get the last path item (the file name), split by _
 
     tStartMaksed = dates[0]
@@ -125,8 +125,7 @@ for fn in nc_files:
                  + "_" + "SOTS" \
                  + "_" + fileProductType + "-" + fileProductTypeSplit[1] \
                  + "_D" \
-                 + "_" + sensor + "-" + nominal_depth + "_" + original_file_creation_date[0]  \
-                 + ".nc"
+                 + "_" + sensor + "-" + nominal_depth + "_" + "D" + ".nc"
 
     print("output file : %s" % outputName)
 
@@ -176,7 +175,6 @@ for fn in nc_files:
     ncOut.createDimension('LONGITUDE', 1)
 
 
-    history = ds_in.getncattr("history")
     instrumentName = ds_in.getncattr("instrument")
     serialNumber = ds_in.getncattr("instrument_serial_number")
     platform_deployment_date = ds_in.getncattr("time_deployment_start")
@@ -189,7 +187,6 @@ for fn in nc_files:
     ncOut.setncattr("time_coverage_start", dates[0].strftime(ncTimeFormat))
     ncOut.setncattr("time_coverage_end", dates[-1].strftime(ncTimeFormat))
     ncOut.setncattr("date_created", datetime.utcnow().strftime(ncTimeFormat))
-    ncOut.setncattr("history", history + '\n' + datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC : Convert from IMOS file : ") + fileName)
     ncOut.setncattr("acknowledgement", "We acknowledge support from the following agencies: the Australian Antarctic Program Partnership (AAPP), the Antarctic Climate and Ecosystems Cooperative Research Centre (ACE CRC), the Integrated Marine Observing System (www.imos.org.au), University of Tasmania (UTAS), Bureau of Meteorology (BoM), the Marine National Facility (MNF) and the Australian Antarctic Division (AAD). We also acknowledge the support of the CSIRO Moored Sensor Systems team.")
     ncOut.setncattr("data_type", "OceanSITES time-series data")
     ncOut.setncattr("format_version", "1.3")
@@ -355,7 +352,7 @@ for fn in nc_files:
         except AttributeError:
             hist = ""
 
-        ncOut.setncattr('history', hist + datetime.utcnow().strftime("%Y-%m-%d") + " : converted to oceanSITES format from file " + fn)
+        ncOut.setncattr('history', hist + datetime.utcnow().strftime("%Y-%m-%d") + " : converted to oceanSITES format from file " + fileName)
 
     ds_in.close()
 
